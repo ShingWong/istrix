@@ -1,0 +1,144 @@
+# iStrix Common Web Paths for Directory Brute-Force
+# Auto-synced via scripts/sync_web_paths.py
+
+metadata:
+  version: 1
+  last_updated: "2026-04-30"
+  path_count: 106
+
+paths:
+  # General
+  - /
+  - /robots.txt
+  - /sitemap.xml
+  - /crossdomain.xml
+  - /.well-known/
+
+  # Admin & Management
+  - /admin/
+  - /login/
+  - /console/
+  - /actuator/
+  - /actuator/health
+  - /actuator/info
+  - /actuator/env
+  - /jmx-console/
+  - /web-console/
+  - /jenkins/
+  - /solr/
+  - /cpanel
+  - /webmail
+  - /status
+  - /health
+  - /healthz
+  - /readyz
+  - /metrics
+
+  # CMS
+  - /wp-admin/
+  - /wp-login.php
+  - /xmlrpc.php
+  - /wp-content/
+  - /wp-includes/
+  - /administrator/
+  - /bitrix/
+  - /sites/
+  - /moodle/
+  - /drupal/
+  - /joomla/
+  - /typo3/
+  - /magento/
+
+  # Database & Config
+  - /phpmyadmin/
+  - /mysql/
+  - /db/
+  - /config/
+  - /.env
+  - /backup/
+  - /setup/
+  - /install/
+
+  # Development
+  - /.git/
+  - /.svn/
+  - /.DS_Store
+  - /.htaccess
+  - /.idea/
+  - /.vscode/
+  - /.circleci/
+  - /.travis.yml
+  - /.github/
+  - /.gitlab-ci.yml
+  - /Jenkinsfile
+  - /node_modules/
+  - /vendor/
+  - /package.json
+  - /composer.json
+  - /dev/
+  - /test/
+  - /staging/
+  - /debug/
+
+  # API
+  - /api/
+  - /api/v1/
+  - /graphql
+  - /swagger/
+  - /docs/
+
+  # File Upload
+  - /upload/
+  - /uploads/
+  - /images/
+  - /img/
+
+  # Static Assets
+  - /css/
+  - /js/
+  - /assets/
+  - /static/
+  - /public/
+  - /private/
+
+  # Temporary & Misc
+  - /tmp/
+  - /temp/
+  - /old/
+  - /new/
+  - /v1/
+  - /v2/
+
+  # User Areas
+  - /user/
+  - /users/
+  - /member/
+  - /members/
+  - /customer/
+  - /client/
+  - /clients/
+  - /portal/
+
+  # CGI / Shell
+  - /cgi-bin/
+  - /cgi/
+  - /shell/
+
+  # Mail
+  - /mail/
+  - /owa/
+  - /ecp/
+
+  # PHP
+  - /phpinfo.php
+  - /info.php
+  - /test.php
+
+  # Documentation
+  - /readme.html
+  - /license.txt
+  - /changelog.txt
+
+  # Server Info
+  - /server-status
+  - /server-info

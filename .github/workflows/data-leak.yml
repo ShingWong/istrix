@@ -1,0 +1,18 @@
+name: Data-Leak Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run data-leak validator
+        run: bash .github/scripts/ci_data_leak_check.sh

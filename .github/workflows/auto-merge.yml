@@ -1,0 +1,54 @@
+name: Auto-Merge to Main
+
+on:
+  push:
+    branches: [develop]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [develop]
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: develop
+
+      - name: Check if PR already exists
+        id: check-pr
+        run: |
+          EXISTING=$(gh pr list --base main --head develop --json number --jq '.[0].number' 2>/dev/null || echo "")
+          echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create PR from develop to main
+        if: steps.check-pr.outputs.number == ''
+        id: create-pr
+        run: |
+          PR_URL=$(gh pr create \
+            --base main \
+            --head develop \
+            --title "chore: merge develop into main [automated]" \
+            --body "Automated merge from \`develop\` into \`main\` after CI passed." \
+            --label "automated,auto-merge")
+          echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.url != ''
+        run: |
+          gh pr merge "$PR_URL" --auto --squash || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ steps.create-pr.outputs.url }}

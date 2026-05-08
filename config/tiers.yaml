@@ -1,0 +1,58 @@
+tiers:
+  quick:
+    label: "Basic Discovery"
+    description: "Fast TCP scan of top 100 ports. Results in under 30 seconds."
+    nmap_flags: "-sS -T4 -F --top-ports 100"
+    follow_up: []
+    timeout: 60
+    intensity: passive
+
+  normal:
+    label: "Standard Scan"
+    description: "Service detection, default scripts, top 10000 ports."
+    nmap_flags: "-sS -sV -sC -T4 -p 1-10000"
+    follow_up:
+      - http_probe
+      - cve_enrich
+      - windows_probe
+    timeout: 300
+    intensity: active
+
+  full:
+    label: "Deep Enumeration"
+    description: "All ports, OS detection, full service scan, DNS and SSL checks."
+    nmap_flags: "-sS -sV -sC -O -p- -T4 --min-rate 5000 --max-retries 1 --host-timeout 300s --script broadcast,ldap-rootdse"
+    follow_up:
+      - http_probe
+      - ssl_check
+      - cve_enrich
+      - printer_probe
+      - windows_probe
+      - dns_probe
+      - camera_probe
+    timeout: 900
+    intensity: active
+
+  aggressive:
+    label: "Intrusive Testing"
+    description: "Full port scan with vulnerability NSE scripts. Significant traffic."
+    nmap_flags: "-sS -sV -sC -O -p- -T4 --min-rate 5000 --max-retries 1 --host-timeout 600s --script vuln,broadcast,snmp-info,ldap-rootdse"
+    follow_up:
+      - http_probe
+      - ssl_check
+      - dir_bust
+      - cve_enrich
+      - printer_probe
+      - windows_probe
+      - dns_probe
+      - camera_probe
+    timeout: 1800
+    intensity: intrusive
+
+  stealth:
+    label: "Stealth Recon"
+    description: "Slow, evasive scan with packet fragmentation. IDS/IPS evasion."
+    nmap_flags: "-sS -Pn -T2 -f --max-retries 1 --data-length 25"
+    follow_up: []
+    timeout: 600
+    intensity: passive

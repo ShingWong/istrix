@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install ruff
+      - name: Ruff check
+        run: ruff check src/
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project + test deps
+        run: |
+          pip install -e ".[all]"
+          pip install pytest pytest-cov
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  security-audit:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project + pip-audit
+        run: |
+          pip install -e ".[all]"
+          pip install pip-audit
+      - name: Audit dependencies
+        run: |
+          pip install --upgrade pip
+          pip-audit --desc on --ignore-vuln CVE-2026-3219
+
+  validate-data:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: pip install pyyaml
+      - name: Validate vulndb.yaml freshness
+        run: |
+          python -c "
+          import yaml, sys
+          from datetime import datetime, timedelta
+          try:
+              with open('config/vulndb.yaml') as f:
+                  data = yaml.safe_load(f)
+              updated = data['metadata'].get('last_updated', '1970-01-01')
+              age = (datetime.now() - datetime.strptime(updated, '%Y-%m-%d')).days
+              if age > 60:
+                  print(f'ERROR: vulndb.yaml is {age} days stale (max 60)')
+                  sys.exit(1)
+              elif age > 14:
+                  print(f'WARNING: vulndb.yaml is {age} days stale')
+              else:
+                  print(f'vulndb.yaml OK ({age} days old)')
+          except Exception as e:
+              print(f'ERROR reading vulndb.yaml: {e}')
+              sys.exit(1)
+          "
+      - name: Validate web_paths.yaml freshness
+        run: |
+          python -c "
+          import yaml, sys
+          from datetime import datetime, timedelta
+          try:
+              with open('config/web_paths.yaml') as f:
+                  data = yaml.safe_load(f)
+              updated = data['metadata'].get('last_updated', '1970-01-01')
+              age = (datetime.now() - datetime.strptime(updated, '%Y-%m-%d')).days
+              if age > 60:
+                  print(f'ERROR: web_paths.yaml is {age} days stale (max 60)')
+                  sys.exit(1)
+              elif age > 30:
+                  print(f'WARNING: web_paths.yaml is {age} days stale')
+              else:
+                  print(f'web_paths.yaml OK ({age} days old)')
+          except Exception as e:
+              print(f'ERROR reading web_paths.yaml: {e}')
+              sys.exit(1)
+          "
+
+  build-check:
+    needs: [test, security-audit]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: pip install build
+      - name: Build package
+        run: python -m build
+      - name: Verify wheel contents
+        run: |
+          pip install dist/*.whl
+          python -c "import istrix; print(istrix.__version__)"

@@ -1,0 +1,189 @@
+# iStrix Vulnerability Knowledge Base
+# Auto-synced from NVD via scripts/sync_vulndb.py
+# Manual entries preserved; auto-entries merged on CVSS >= 7.0
+
+metadata:
+  version: 1
+  last_updated: "2026-04-30"
+  source: "NVD API 2.0 (nvdlib)"
+  cve_count: 7
+  min_cvss: 7.0
+
+vulnerabilities:
+  CVE-2024-6387:
+    title: "regreSSHion — OpenSSH Remote Code Execution"
+    cvss: "8.1"
+    vector: "AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    summary: >
+      A signal handler race condition in OpenSSH's server (sshd) allows unauthenticated
+      remote attackers to execute arbitrary code as root on glibc-based Linux systems.
+      This vulnerability, dubbed 'regreSSHion', is a regression of CVE-2006-5051 that was
+      reintroduced in OpenSSH 8.5p1. The attack requires approximately 10,000 authentication
+      attempts on average to win the race condition, making exploitation feasible within
+      hours on vulnerable 32-bit systems and days on 64-bit systems.
+    exploit_narrative: >
+      An attacker on the same network can repeatedly initiate SSH connections to the
+      target server. Each connection attempt races the signal handler; after roughly
+      10,000 attempts the attacker wins the race and gains root-level remote code
+      execution. In practical terms this means a single unauthenticated adversary can
+      fully compromise the host — reading sensitive data, installing persistent backdoors,
+      or pivoting deeper into the network — without any prior access or credentials.
+    commands:
+      - "apt update && apt install --only-upgrade openssh-server openssh-client -y"
+      - "sshd -t && systemctl restart sshd"
+      - "ssh -V 2>&1 | grep -E 'OpenSSH_[0-9]'"
+    services:
+      - openssh
+    source: manual
+
+  CVE-2023-38408:
+    title: "OpenSSH ssh-agent Remote Code Execution"
+    cvss: "9.8"
+    vector: "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    summary: >
+      A vulnerability in the PKCS#11 feature of OpenSSH's ssh-agent allows remote code execution.
+      When ssh-agent is forwarded to an attacker-controlled system, loading a malicious shared library
+      via PKCS#11 can execute arbitrary commands. This affects any system where SSH agent forwarding
+      is enabled, a common practice in development and CI/CD environments.
+    exploit_narrative: >
+      An attacker who controls a jump host or compromised intermediate server can leverage
+      agent forwarding to load a malicious PKCS#11 library into the victim's ssh-agent process.
+      Once loaded, the library executes arbitrary code with the victim's privileges,
+      potentially giving the attacker access to all SSH keys loaded in the agent, allowing
+      lateral movement to every server the victim can access.
+    commands:
+      - "apt update && apt install --only-upgrade openssh-client -y"
+      - "echo 'ForwardAgent no' >> /etc/ssh/ssh_config"
+      - "echo 'Host *\n    ForwardAgent no' >> ~/.ssh/config"
+    services:
+      - openssh
+    source: manual
+
+  CVE-2021-41617:
+    title: "OpenSSH Privilege Escalation"
+    cvss: "7.0"
+    vector: "AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H"
+    summary: >
+      A flaw in OpenSSH allows a local attacker to escalate privileges due to incorrect
+      handling of supplemental groups when sshd is configured with AuthorizedKeysCommand or
+      AuthorizedPrincipalsCommand. The vulnerability can lead to unauthorized root access
+      on affected systems where these features are enabled.
+    exploit_narrative: >
+      A local user who already has shell access to the system can exploit misconfigured
+      sshd supplemental-group handling to escalate to root. This is especially dangerous
+      in multi-user environments where an attacker first obtains a low-privilege account
+      and then uses this CVE to gain full administrative control.
+    commands:
+      - "apt update && apt install --only-upgrade openssh-server -y"
+      - "grep -r 'AuthorizedKeysCommand\\|AuthorizedPrincipalsCommand' /etc/ssh/"
+      - "systemctl restart sshd"
+    services:
+      - openssh
+    source: manual
+
+  CVE-2023-48795:
+    title: "SSH Terrapin Prefix Truncation Attack"
+    cvss: "5.9"
+    vector: "AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N"
+    summary: >
+      The Terrapin attack exploits weaknesses in the SSH transport layer protocol (ChaCha20-Poly1305
+      and CBC-EtM). A man-in-the-middle attacker can truncate extension negotiation messages,
+      downgrading connection security. This affects OpenSSH and many other SSH implementations.
+    exploit_narrative: >
+      A machine-in-the-middle attacker positioned between the client and server can silently strip
+      security extensions from the SSH handshake, forcing the connection to use weaker
+      cryptographic primitives. While the attacker cannot directly read traffic, the downgrade
+      makes subsequent attacks (such as keystroke timing analysis or brute-force) significantly
+      easier. In environments where SSH is used for automated file transfers or CI/CD pipelines,
+      downgraded connections may expose sensitive build artifacts or deployment credentials.
+    commands:
+      - "apt update && apt install --only-upgrade openssh-server openssh-client -y"
+      - "echo 'Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com' >> /etc/ssh/sshd_config.d/90-hardening.conf"
+      - "echo 'MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com' >> /etc/ssh/sshd_config.d/90-hardening.conf"
+      - "systemctl restart sshd"
+    services:
+      - openssh
+    source: manual
+
+  CVE-2026-27654:
+    title: "nginx HTTP Request Smuggling / Memory Disclosure"
+    cvss: "8.8"
+    vector: "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    summary: >
+      A critical vulnerability in nginx 1.20.x allows remote attackers to perform HTTP request
+      smuggling and potentially read sensitive memory. This can lead to information disclosure,
+      cache poisoning, and bypass of security controls. Affects configurations with proxy_pass
+      or certain rewrite rules.
+    exploit_narrative: >
+      An unauthenticated attacker sends specially crafted HTTP requests that confuse nginx's
+      request parsing, smuggling a second malicious request inside the first. This can poison
+      the reverse-proxy cache (serving attacker-controlled content to legitimate users),
+      leak session tokens or authentication headers from other users' requests, and in some
+      configurations read sensitive memory from nginx worker processes. Any internet-facing
+      nginx reverse proxy is directly exploitable.
+    commands:
+      - "apt update && apt install --only-upgrade nginx -y"
+      - "wget https://nginx.org/download/nginx-1.26.0.tar.gz"
+      - "nginx -t && systemctl restart nginx"
+      - "nginx -v 2>&1"
+    services:
+      - nginx
+    source: manual
+
+  CVE-2022-41741:
+    title: "nginx MP4 Module Memory Corruption"
+    cvss: "7.8"
+    vector: "AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"
+    summary: >
+      A memory corruption vulnerability in the ngx_http_mp4_module of nginx. A local attacker
+      with write access to an MP4 file processed by nginx can trigger memory corruption,
+      potentially leading to arbitrary code execution. While primarily local, this can be
+      chained with other vulnerabilities.
+    exploit_narrative: >
+      A local attacker who can place a crafted MP4 file in a directory served by nginx
+      can trigger memory corruption when nginx processes the file, potentially executing
+      arbitrary code as the nginx worker user (often www-data). This can serve as a
+      privilege-escalation step after obtaining limited file-write access via another
+      vulnerability such as an upload bypass or path traversal.
+    commands:
+      - "apt update && apt install --only-upgrade nginx -y"
+      - "nginx -V 2>&1 | grep mp4 && echo 'Consider recompiling without --with-http_mp4_module'"
+      - "nginx -t && systemctl restart nginx"
+    services:
+      - nginx
+    source: manual
+
+  CVE-2022-41742:
+    title: "nginx MP4 Module Out-of-Bounds Read"
+    cvss: "7.1"
+    vector: "AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:H"
+    summary: >
+      An out-of-bounds read in the ngx_http_mp4_module allows local attackers with access to
+      maliciously crafted MP4 files to read sensitive memory contents, including potentially
+      SSL private keys, session tokens, or other secrets in nginx worker process memory.
+    exploit_narrative: >
+      An attacker who can place a crafted MP4 file on the server triggers nginx to read
+      beyond buffer boundaries, exposing chunks of worker-process memory, potentially
+      containing TLS session keys, HTTP authorization headers, or SSL private key material.
+    commands:
+      - "apt update && apt install --only-upgrade nginx -y"
+      - "nginx -t && systemctl restart nginx"
+    services:
+      - nginx
+    source: manual
+
+fallback:
+  title: ~
+  cvss: "N/A"
+  vector: "N/A"
+  summary: >
+    This CVE was identified by the Vulners NSE script during the scan.
+    Refer to the NVD link for full details and the latest CVSS score.
+    The finding indicates a known vulnerability exists in the detected software version.
+  exploit_narrative: >
+    This vulnerability was flagged by automated detection during the scan.
+    Without a specific knowledge-base entry the exact exploitation mechanics
+    cannot be detailed here, but any CVE appearing in a live scan result
+    represents a published, verifiable weakness. Attackers may leverage
+    publicly available exploit code or proof-of-concept research to target
+    this flaw.

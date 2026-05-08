@@ -1,0 +1,51 @@
+name: Vulnerability DB Sync
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+          pip install nvdlib
+
+      - name: Sync vulnerability database
+        id: sync
+        run: |
+          python scripts/sync_vulndb.py --min-cvss 7.0 --lookback 90
+          echo "changed=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.sync.outputs.changed == '1'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: auto-update/vulndb
+          base: develop
+          title: "chore: sync vulnerability database from NVD"
+          body: |
+            Automated vulnerability database sync from NVD (NIST National Vulnerability Database).
+
+            - CVEs fetched: CVSS >= 7.0, published in the last 90 days
+            - Manual entries preserved
+            - Automatically merged by CI pipeline
+          labels: |
+            automated
+            security
+            vulndb
+          commit-message: "chore: sync vulndb from NVD"
